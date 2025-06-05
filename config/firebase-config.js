@@ -23,7 +23,7 @@ const serviceAccount = {
 // Initialize the app with admin privileges
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://quiquest-1063c-default-rtdb.asia-southeast1.firebasedatabase.app"
+  databaseURL: "https://quizquest-afebc-default-rtdb.asia-southeast1.firebasedatabase.app/"
 });
 
 // Export Firebase services
