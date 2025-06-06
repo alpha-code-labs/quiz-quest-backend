@@ -46,6 +46,8 @@ router.post('/leagues/:leagueId/createGame', controllers.createLeagueGame);
 // Add this route
 router.post('/track/single-player-click', controllers.trackSinglePlayerClick);
 router.post('/track/multiplayer-click', controllers.trackMultiplayerClick);
+router.post('/track/share-click', controllers.trackShareClick);
+
 
 
 module.exports = router;
