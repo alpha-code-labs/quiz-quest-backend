@@ -20,13 +20,6 @@ const serviceAccount = {
   client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL
 };
 
-console.log('Firebase Config Debug:');
-console.log('Project ID:', process.env.FIREBASE_PROJECT_ID);
-console.log('Client Email:', process.env.FIREBASE_CLIENT_EMAIL);
-console.log('Private Key ID:', process.env.FIREBASE_PRIVATE_KEY_ID);
-console.log('Database URL:', "https://quizquest-afebc-default-rtdb.asia-southeast1.firebasedatabase.app");
-
-
 // Initialize the app with admin privileges
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
