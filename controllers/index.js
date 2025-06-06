@@ -1380,6 +1380,43 @@ const getUserLeagues = async (req, res) => {
       });
     }
     
+    // TRACK LEAGUE ICON CLICK - Fire and forget (don't block main functionality)
+    try {
+      // Reference to the counter document for league icon clicks
+      const counterRef = db.collection('counters').doc('leagueIconClicks');
+      
+      // Use a transaction to ensure atomic increment
+      db.runTransaction(async (transaction) => {
+        const counterDoc = await transaction.get(counterRef);
+        
+        let currentCount = 0;
+        if (counterDoc.exists) {
+          currentCount = counterDoc.data().totalClicks || 0;
+        }
+        
+        // Increment the counter
+        const newCount = currentCount + 1;
+        
+        // Update the counter document
+        transaction.set(counterRef, {
+          totalClicks: newCount,
+          label: 'LeagueIconClicks',
+          lastUpdated: new Date().toISOString(),
+          lastClickedBy: userId || 'unknown'
+        });
+      }).then(() => {
+        console.log('League icon click tracked successfully');
+      }).catch(trackingError => {
+        console.error('Error tracking league icon click:', trackingError);
+        // Continue with main function even if tracking fails
+      });
+      
+    } catch (trackingError) {
+      console.error('Error in league icon click tracking:', trackingError);
+      // Continue with main function even if tracking fails
+    }
+    
+    // ORIGINAL GETUSERLEAGUES FUNCTIONALITY (unchanged)
     // Let's log the structure for debugging
     
     // Modify the query to use a different approach
