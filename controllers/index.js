@@ -172,11 +172,65 @@ const updateUserName = async (req, res) => {
      return res.status(404).json({ message: 'User not found' });
    }
    
-   // Update only the display name field
+   // Update only the display name field in users collection
    await userRef.update({
      displayName: displayName,
      updatedAt: new Date().toISOString()
    });
+   
+   // NEW: Update the user's name in all leagues where they are a member
+   try {
+     console.log(`Updating league member names for user ${userId} with new name: ${displayName}`);
+     
+     // Get all leagues where this user is a member
+     const leaguesRef = db.collection('leagues');
+     const leaguesSnapshot = await leaguesRef.get();
+     
+     // Batch update for efficient database operations
+     const batch = db.batch();
+     let leaguesUpdated = 0;
+     
+     leaguesSnapshot.forEach(leagueDoc => {
+       const leagueData = leagueDoc.data();
+       
+       // Check if user is in this league's members array
+       if (leagueData.members && Array.isArray(leagueData.members)) {
+         const memberIndex = leagueData.members.findIndex(member => member.id === userId);
+         
+         if (memberIndex !== -1) {
+           // User found in this league - update their name
+           const updatedMembers = [...leagueData.members];
+           updatedMembers[memberIndex] = {
+             ...updatedMembers[memberIndex],
+             name: displayName
+           };
+           
+           // Add this league update to the batch
+           const leagueRef = db.collection('leagues').doc(leagueDoc.id);
+           batch.update(leagueRef, {
+             members: updatedMembers,
+             lastActivity: new Date().toISOString()
+           });
+           
+           leaguesUpdated++;
+           console.log(`Added league ${leagueDoc.id} to batch update`);
+         }
+       }
+     });
+     
+     // Commit all league updates
+     if (leaguesUpdated > 0) {
+       await batch.commit();
+       console.log(`Successfully updated ${leaguesUpdated} leagues with new display name`);
+     } else {
+       console.log('No leagues found for this user');
+     }
+     
+   } catch (leagueUpdateError) {
+     console.error('Error updating leagues with new display name:', leagueUpdateError);
+     // Don't fail the entire request if league updates fail
+     // The user's name is still updated in the users collection
+   }
    
    // Return success response
    res.status(200).json({ 
@@ -190,7 +244,6 @@ const updateUserName = async (req, res) => {
    res.status(500).json({ error: error.message });
  }
 };
-
 // Add this new controller function to update user's trivia points
 const updateUserPoints = async (req, res) => {
 
