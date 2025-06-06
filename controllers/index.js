@@ -1743,7 +1743,7 @@ const createLeagueGame = async (req, res) => {
 };
 
 const trackSinglePlayerClick = async (req, res) => {
- console.log("Hi i am about to track a single player click"
+ console.log("Hi i am about to track a single player click")
   try {
   console.log("Hi i am inside the try block")
     const { userId } = req.body; // Optional: track which user clicked
