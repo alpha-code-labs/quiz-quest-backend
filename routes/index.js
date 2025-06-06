@@ -44,6 +44,6 @@ router.post('/leagues/:leagueCode/join', controllers.joinLeague);
 // Add this line with the other league routes
 router.post('/leagues/:leagueId/createGame', controllers.createLeagueGame);
 // Add this route
-router.post('/api/track/single-player-click', trackSinglePlayerClick);
+router.post('/api/track/single-player-click', controllers.trackSinglePlayerClick);
 
 module.exports = router;
