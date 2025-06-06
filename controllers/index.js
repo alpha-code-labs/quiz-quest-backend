@@ -1911,6 +1911,52 @@ const trackMultiplayerClick = async (req, res) => {
 };
 
 
+const trackShareClick = async (req, res) => {
+  try {
+    const { userId } = req.body; // Optional: track which user clicked
+    
+    // Reference to the counter document for share button clicks
+    const counterRef = db.collection('counters').doc('shareButtonClicks');
+    
+    // Use a transaction to ensure atomic increment
+    await db.runTransaction(async (transaction) => {
+      const counterDoc = await transaction.get(counterRef);
+      
+      let currentCount = 0;
+      if (counterDoc.exists) {
+        currentCount = counterDoc.data().totalClicks || 0;
+      }
+      
+      // Increment the counter
+      const newCount = currentCount + 1;
+      
+      // Update the counter document
+      transaction.set(counterRef, {
+        totalClicks: newCount,
+        label: 'ShareButtonClicks',
+        lastUpdated: new Date().toISOString(),
+        lastClickedBy: userId || 'unknown'
+      });
+    });
+    
+    console.log('Share button click tracked successfully');
+    
+    // Return quick success response (don't make frontend wait)
+    res.status(200).json({ 
+      success: true,
+      message: 'Share click tracked'
+    });
+    
+  } catch (error) {
+    console.error('Error tracking share button click:', error);
+    // Return success even on error to not impact frontend flow
+    res.status(200).json({ 
+      success: true,
+      message: 'Click received'
+    });
+  }
+};
+
 
 
 module.exports = {
@@ -1938,5 +1984,6 @@ module.exports = {
  joinLeague,
  createLeagueGame,
  trackSinglePlayerClick,
- trackMultiplayerClick
+ trackMultiplayerClick,
+ trackShareClick
 };
