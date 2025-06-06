@@ -336,6 +336,45 @@ try {
 const getLeaderboard = async (req, res) => {
 
 try {
+  // TRACK LEADERBOARD CLICK - Fire and forget (don't block main functionality)
+  try {
+    const { userId } = req.query; // Get userId from query params if provided
+    
+    // Reference to the counter document for leaderboard clicks
+    const counterRef = db.collection('counters').doc('leaderboardClicks');
+    
+    // Use a transaction to ensure atomic increment
+    db.runTransaction(async (transaction) => {
+      const counterDoc = await transaction.get(counterRef);
+      
+      let currentCount = 0;
+      if (counterDoc.exists) {
+        currentCount = counterDoc.data().totalClicks || 0;
+      }
+      
+      // Increment the counter
+      const newCount = currentCount + 1;
+      
+      // Update the counter document
+      transaction.set(counterRef, {
+        totalClicks: newCount,
+        label: 'LeaderboardClicks',
+        lastUpdated: new Date().toISOString(),
+        lastClickedBy: userId || 'unknown'
+      });
+    }).then(() => {
+      console.log('Leaderboard click tracked successfully');
+    }).catch(trackingError => {
+      console.error('Error tracking leaderboard click:', trackingError);
+      // Continue with main function even if tracking fails
+    });
+    
+  } catch (trackingError) {
+    console.error('Error in leaderboard click tracking:', trackingError);
+    // Continue with main function even if tracking fails
+  }
+
+  // ORIGINAL LEADERBOARD FUNCTIONALITY (unchanged)
   // Default limit of users to return, can be overridden with query parameter
   let limit = 50;
   if (req.query.limit && !isNaN(req.query.limit)) {
