@@ -1788,6 +1788,52 @@ const trackSinglePlayerClick = async (req, res) => {
   }
 };
 
+const trackMultiplayerClick = async (req, res) => {
+  try {
+    const { userId } = req.body; // Optional: track which user clicked
+    
+    // Reference to the counter document for multiplayer clicks
+    const counterRef = db.collection('counters').doc('multiplayerClicks');
+    
+    // Use a transaction to ensure atomic increment
+    await db.runTransaction(async (transaction) => {
+      const counterDoc = await transaction.get(counterRef);
+      
+      let currentCount = 0;
+      if (counterDoc.exists) {
+        currentCount = counterDoc.data().totalClicks || 0;
+      }
+      
+      // Increment the counter
+      const newCount = currentCount + 1;
+      
+      // Update the counter document
+      transaction.set(counterRef, {
+        totalClicks: newCount,
+        label: 'MultiplayerClicks',
+        lastUpdated: new Date().toISOString(),
+        lastClickedBy: userId || 'unknown'
+      });
+    });
+    
+    console.log('Multiplayer click tracked successfully');
+    
+    // Return quick success response (don't make frontend wait)
+    res.status(200).json({ 
+      success: true,
+      message: 'Click tracked'
+    });
+    
+  } catch (error) {
+    console.error('Error tracking multiplayer click:', error);
+    // Return success even on error to not impact frontend flow
+    res.status(200).json({ 
+      success: true,
+      message: 'Click received'
+    });
+  }
+};
+
 
 
 
@@ -1815,5 +1861,6 @@ module.exports = {
  getLeagueDetails,
  joinLeague,
  createLeagueGame,
- trackSinglePlayerClick
+ trackSinglePlayerClick,
+ trackMultiplayerClick
 };
