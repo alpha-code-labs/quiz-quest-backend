@@ -1743,7 +1743,9 @@ const createLeagueGame = async (req, res) => {
 };
 
 const trackSinglePlayerClick = async (req, res) => {
+ console.log("Hi i am about to track a single player click"
   try {
+  console.log("Hi i am inside the try block")
     const { userId } = req.body; // Optional: track which user clicked
     
     // Reference to the counter document for single player clicks
@@ -1760,7 +1762,8 @@ const trackSinglePlayerClick = async (req, res) => {
       
       // Increment the counter
       const newCount = currentCount + 1;
-      
+
+     console.log("Hi i am bout to make an entry")
       // Update the counter document
       transaction.set(counterRef, {
         totalClicks: newCount,
