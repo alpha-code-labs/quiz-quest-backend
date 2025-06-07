@@ -1971,8 +1971,9 @@ const awardDailyLoginBonus = async (req, res) => {
     }
     
     // Get today's date string (YYYY-MM-DD format for consistency)
-    const today = new Date().toISOString().split('T')[0];
-    
+    // const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0] + '_' + new Date().getHours();
+
     // Reference to the user document
     const userRef = db.collection('users').doc(userId);
     
