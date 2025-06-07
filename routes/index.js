@@ -47,6 +47,9 @@ router.post('/leagues/:leagueId/createGame', controllers.createLeagueGame);
 router.post('/track/single-player-click', controllers.trackSinglePlayerClick);
 router.post('/track/multiplayer-click', controllers.trackMultiplayerClick);
 router.post('/track/share-click', controllers.trackShareClick);
+router.post('/users/:userId/daily-bonus', controllers.awardDailyLoginBonus);
+router.get('/users/:userId/daily-bonus/check', controllers.checkDailyBonusAvailability);
+
 
 
 
