@@ -1957,6 +1957,197 @@ const trackShareClick = async (req, res) => {
   }
 };
 
+const awardDailyLoginBonus = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { timestamp } = req.body;
+    
+    // Validate input
+    if (!userId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'UserId is required' 
+      });
+    }
+    
+    // Get today's date string (YYYY-MM-DD format for consistency)
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Reference to the user document
+    const userRef = db.collection('users').doc(userId);
+    
+    // Check if user exists
+    const userDoc = await userRef.get();
+    
+    if (!userDoc.exists) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+    
+    const userData = userDoc.data();
+    
+    // Check if user already received bonus today
+    const lastDailyBonus = userData.lastDailyBonusDate;
+    
+    if (lastDailyBonus === today) {
+      return res.status(200).json({ 
+        success: false, 
+        message: 'Daily bonus already claimed today',
+        alreadyClaimed: true
+      });
+    }
+    
+    // Award daily bonus points (100 points)
+    const bonusPoints = 100;
+    const currentPoints = userData.triviaPoints || 0;
+    const newTotalPoints = currentPoints + bonusPoints;
+    
+    // Update user document with new points and bonus date
+    await userRef.update({
+      triviaPoints: newTotalPoints,
+      lastDailyBonusDate: today,
+      lastDailyBonusAmount: bonusPoints,
+      lastDailyBonusTimestamp: timestamp || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+    
+    // Recalculate user rankings after points update
+    try {
+      // Get all users ordered by points
+      const usersSnapshot = await db.collection('users')
+        .orderBy('triviaPoints', 'desc')
+        .get();
+      
+      // Batch update to efficiently update all users
+      const batch = db.batch();
+      let newRank = 1;
+      let updatedUserRank = 0;
+      
+      // Update ranks for all users
+      usersSnapshot.forEach(doc => {
+        const userRefBatch = db.collection('users').doc(doc.id);
+        batch.update(userRefBatch, { currentRank: newRank });
+        
+        // If this is the user we just updated, store their new rank
+        if (doc.id === userId) {
+          updatedUserRank = newRank;
+        }
+        
+        newRank++;
+      });
+      
+      // Commit all ranking updates
+      await batch.commit();
+      
+      // TRACK DAILY BONUS AWARD - Fire and forget
+      try {
+        const counterRef = db.collection('counters').doc('dailyBonusAwarded');
+        
+        db.runTransaction(async (transaction) => {
+          const counterDoc = await transaction.get(counterRef);
+          
+          let currentCount = 0;
+          if (counterDoc.exists) {
+            currentCount = counterDoc.data().totalAwarded || 0;
+          }
+          
+          const newCount = currentCount + 1;
+          
+          transaction.set(counterRef, {
+            totalAwarded: newCount,
+            label: 'DailyBonusAwarded',
+            lastUpdated: new Date().toISOString(),
+            lastAwardedTo: userId,
+            lastBonusAmount: bonusPoints
+          });
+        }).catch(trackingError => {
+          console.error('Error tracking daily bonus award:', trackingError);
+        });
+        
+      } catch (trackingError) {
+        console.error('Error in daily bonus tracking:', trackingError);
+      }
+      
+      // Return success response with updated data
+      return res.status(200).json({
+        success: true,
+        message: 'Daily login bonus awarded successfully!',
+        bonusPoints: bonusPoints,
+        totalPoints: newTotalPoints,
+        currentRank: updatedUserRank,
+        userId: userId
+      });
+      
+    } catch (rankUpdateError) {
+      console.error('Error updating user rankings after daily bonus:', rankUpdateError);
+      
+      // Still return success since the points were awarded successfully
+      return res.status(200).json({
+        success: true,
+        message: 'Daily login bonus awarded (ranking update pending)',
+        bonusPoints: bonusPoints,
+        totalPoints: newTotalPoints,
+        userId: userId
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error in awardDailyLoginBonus:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+};
+
+const checkDailyBonusAvailability = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    if (!userId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'UserId is required' 
+      });
+    }
+    
+    // Get today's date string
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Get user document
+    const userDoc = await db.collection('users').doc(userId).get();
+    
+    if (!userDoc.exists) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+    
+    const userData = userDoc.data();
+    const lastDailyBonus = userData.lastDailyBonusDate;
+    
+    // Check if bonus is available today
+    const isAvailable = lastDailyBonus !== today;
+    
+    return res.status(200).json({
+      success: true,
+      bonusAvailable: isAvailable,
+      lastClaimedDate: lastDailyBonus || null,
+      today: today
+    });
+    
+  } catch (error) {
+    console.error('Error in checkDailyBonusAvailability:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+};
+
 
 
 module.exports = {
@@ -1985,5 +2176,7 @@ module.exports = {
  createLeagueGame,
  trackSinglePlayerClick,
  trackMultiplayerClick,
- trackShareClick
+ trackShareClick,
+ awardDailyLoginBonus,
+ checkDailyBonusAvailability
 };
